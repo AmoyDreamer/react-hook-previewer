@@ -22,11 +22,13 @@ return (
 ```
 
 ## Description
-
 previewer => {React DOM Element} image previewer component.
 
 openPreviewer(url)
 - url => {String} image url. If you want to open the previewer, you must pass a valid url.(required)
+
+### Tips
+If you want to close the previewer, you can click anywhere on the screen.
 
 ## License
 react-hook-previewer is [MIT licensed](https://github.com/AmoyDreamer/react-hook-previewer/blob/master/LICENSE).
