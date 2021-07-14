@@ -2,7 +2,7 @@
  * @author Allen Liu
  * @desc An image preview component based on React Hook.
  */
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 
 const FullScreenStyle = {
 	position: 'fixed',
@@ -24,55 +24,54 @@ const AbsoluteCenterStyle = {
 	OTransform: 'translate(-50%, -50%)',
 	transform: 'translate(-50%, -50%)'
 }
-const GetPreviewImageSize = (url, scale=0.7) => {
-	return new Promise((resolve, reject) => {
-		let image = new Image()
-		image.onload = () => {
-			let width, height
-			const imgWidth = image.width,//Image original width
-				imgHeight = image.height//Image original height
-			const winWidth = window.screen.width,//Window screen width
-				winHeight = window.screen.height//Window screen height
-			const imageRate = imgWidth / imgHeight//Image true aspect ratio
-			const winRate = winWidth / winHeight//Screen aspect ratio
-			const isLandscape = imgWidth > imgHeight//Is the image in landscape
-			//The actual image aspect ratio is greater than or equal to the screen aspect ratio, then take the width of the screen as the size of the base standard to ensure that the full image is displayed in one screen
-			if (imageRate >= winRate) {
-				width = isLandscape ? winWidth : winWidth * scale
-				height = width / imageRate
-			//The actual image aspect ratio is smaller than the screen aspect ratio, then take the height of the screen as the base standard size to ensure that the full image is displayed in one screen
-			} else {
-				height = winHeight * scale
-				width = height * imageRate
-			}
-			resolve({
-				width: width + 'px',
-				height: height + 'px'
-			})
-		}
-		image.onerror = err => reject(err)
-		image.src = url
-	})
-}
 const usePreviewer = () => {
+	const imgRef = useRef(null)
 	const [object, setObject] = useState(() => ({
 		open: false,
-		url: '',
 		style: {}
 	}))
-	const ClosePreviewer = () => {
-		setObject({
-			open: false,
-			url: '',
-			style: {}
+	const GetPreviewImageSize = (url, scale=0.7) => {
+		return new Promise((resolve, reject) => {
+			let image = imgRef.current
+			image.onload = () => {
+				let width, height
+				const imgWidth = image.width//Image original width
+				const imgHeight = image.height//Image original height
+				const winWidth = window.screen.width//Window screen width
+				const winHeight = window.screen.height//Window screen height
+				const imageRate = imgWidth / imgHeight//Image true aspect ratio
+				const winRate = winWidth / winHeight//Screen aspect ratio
+				const isLandscape = imgWidth > imgHeight//Is the image in landscape
+				//The actual image aspect ratio is greater than or equal to the screen aspect ratio, then take the width of the screen as the size of the base standard to ensure that the full image is displayed in one screen
+				if (imageRate >= winRate) {
+					width = isLandscape ? winWidth : winWidth * scale
+					height = width / imageRate
+				//The actual image aspect ratio is smaller than the screen aspect ratio, then take the height of the screen as the base standard size to ensure that the full image is displayed in one screen
+				} else {
+					height = winHeight * scale
+					width = height * imageRate
+				}
+				resolve({
+					width: width + 'px',
+					height: height + 'px'
+				})
+			}
+			image.onerror = err => reject(err)
+			image.src = url
 		})
 	}
-	const OpenPreviewer = (url) => {
+	const closePreviewer = () => {
+		setObject({
+			open: false,
+			style: {}
+		})
+		imgRef.current.src = ''
+	}
+	const openPreviewer = (url) => {
 		GetPreviewImageSize(url)
 			.then(({ width, height }) => {
 				setObject({
 					open: true,
-					url: url,
 					style: {
 						display: 'block',
 						width: width,
@@ -82,20 +81,18 @@ const usePreviewer = () => {
 			})
 			.catch(() => {})
 	}
-	const { open, url, style } = object
-	const Previewer = useMemo(() => {
-		if (open) {
-			return <div style={FullScreenStyle} onClick={ClosePreviewer}>
-				<div style={AbsoluteCenterStyle}>
-					<img style={style || {}} src={url}/>
-				</div>
-			</div>
+	const { open, style } = object
+	const previewer = useMemo(() => {
+		const ctxStyle = {
+			...FullScreenStyle,
+			display: open ? 'block' : 'none'
 		}
-		return null
+		return <div style={ctxStyle} onClick={closePreviewer}>
+			<div style={AbsoluteCenterStyle}>
+				<img ref={imgRef} style={style || {}} />
+			</div>
+		</div>
 	}, [open])
-	return {
-		OpenPreviewer,
-		Previewer
-	}
+	return [previewer, openPreviewer]
 }
 export default usePreviewer
